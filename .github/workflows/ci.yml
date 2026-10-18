@@ -132,6 +132,12 @@ jobs:
       - name: Smoke test the app (headless)
         if: runner.os != 'Windows'
         shell: bash
+        # SDL3's hint names; the SDL2 spellings are silently ignored. On Linux
+        # the fetched SDL3 has only the dummy video driver, so without this the
+        # app cannot initialise video at all.
+        env:
+          SDL_VIDEO_DRIVER: dummy
+          SDL_AUDIO_DRIVER: dummy
         run: ./build/${{ matrix.build_type }}/pool_app --smoke
 
   sanitizers:

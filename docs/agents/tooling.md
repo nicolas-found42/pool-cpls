@@ -41,6 +41,12 @@ tools report twice is a finding people learn to ignore.
 | pre-commit | trailing whitespace, EOF newline, YAML/JSON validity, large files, committing to `main` | compilation |
 | actionlint | workflow syntax and expression types | C++ |
 | libFuzzer + ASan/UBSan | crashes, UB and NaNs on adversarial input | systematic coverage |
+
+`dev.py fuzz` needs an upstream LLVM: Apple's Xcode clang does not ship
+libFuzzer, so the target links but cannot be linked into a runnable binary on a
+stock macOS toolchain. Point the preset at a real LLVM
+(`cmake --preset fuzz -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++`)
+or let CI run it on Linux.
 | CTest + Catch2 | behaviour, invariants, golden regression | performance |
 | `bench/world_bench.cpp` | throughput before/after a change | correctness |
 

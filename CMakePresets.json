@@ -69,6 +69,16 @@
       }
     },
     {
+      "name": "fuzz",
+      "displayName": "libFuzzer target (needs upstream clang)",
+      "inherits": "debug",
+      "cacheVariables": {
+        "POOL_FUZZ": "ON",
+        "POOL_BUILD_APP": "OFF",
+        "POOL_SANITIZE": "address"
+      }
+    },
+    {
       "name": "ci",
       "displayName": "CI (warnings are errors)",
       "inherits": "release",
@@ -84,6 +94,7 @@
     { "name": "asan", "configurePreset": "asan" },
     { "name": "ubsan", "configurePreset": "ubsan" },
     { "name": "coverage", "configurePreset": "coverage" },
+    { "name": "fuzz", "configurePreset": "fuzz" },
     { "name": "ci", "configurePreset": "ci" }
   ],
   "testPresets": [
