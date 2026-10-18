@@ -23,6 +23,9 @@ sphere with a 2D position and velocity plus a full 3D angular velocity.
 
 The library compiles with `-ffp-contract=off` so floating-point contraction
 cannot fuse an `a*b + c` into an FMA and change the last bits of a result.
+Contraction is not the only cross-toolchain variance, so the golden replay
+compares a state digest quantised to a micron rather than exact bits; bit
+equality is asserted only between runs of the same binary (see ADR-0003).
 
 ## Consequences
 

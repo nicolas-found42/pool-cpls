@@ -7,10 +7,14 @@
 #include <cstdlib>
 #include <optional>
 
-// Golden replay: a fixed break must produce the same fingerprint on every run
-// and on every platform built with the same compiler settings. The expected
-// value lives in tests/replay/expected_fingerprint.txt so a physics change is a
-// visible diff.
+// Golden replay: a fixed break must produce the same state digest on every run,
+// across compilers. The expected value lives in
+// tests/replay/expected_fingerprint.txt so a physics change is a visible diff.
+//
+// The digest is quantised to a micron rather than compared bit-for-bit: CI
+// showed the exact fingerprint differs between GCC and Clang even with
+// -ffp-contract=off, because contraction is not the only source of
+// floating-point variance between toolchains.
 //
 // Regenerate deliberately, then review the diff:
 //   POOL_UPDATE_GOLDEN=1 ./build/dev/tests/pool_replay_tests
@@ -19,6 +23,10 @@
 namespace {
 
 constexpr const char* kExpectedPath = POOL_GOLDEN_DIR "/expected_fingerprint.txt";
+
+// One micron, in metres and m/s. A real physics change moves balls far further
+// than this after a break; last-bit compiler noise does not.
+constexpr double kGoldenQuantum = 1.0e-6;
 
 struct Replay {
   std::uint64_t fingerprint{0};
@@ -45,7 +53,7 @@ Replay replay() {
   world.advance(4);
 
   Replay out{};
-  out.fingerprint = world.fingerprint();
+  out.fingerprint = world.state_digest(kGoldenQuantum);
   for (const pool::physics::Ball& ball : world.balls()) {
     if (!ball.on_table)
       ++out.pocketed;
@@ -99,7 +107,8 @@ TEST_CASE("a fixed break produces the recorded fingerprint", "[replay]") {
   INFO("expected file not found or unreadable: "
        << kExpectedPath << " (run with POOL_UPDATE_GOLDEN=1 to create it)");
   REQUIRE(expected.has_value());
-  INFO("recorded fingerprint " << std::hex << expected.value_or(0));
+  INFO("recorded digest " << std::hex << expected.value_or(0) << " (quantum " << kGoldenQuantum
+                          << ")");
   REQUIRE(actual.fingerprint == expected.value_or(0));
 }
 

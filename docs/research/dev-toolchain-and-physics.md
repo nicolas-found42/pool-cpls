@@ -31,8 +31,17 @@ only honest way to pin a non-git transport.
 **Floating-point contraction must be switched off.** GCC and Clang both enable
 FP contraction by default, which lets the compiler fuse `a*b + c` into an FMA and
 change the last bits of a result. This repo compiles the physics library with
-`-ffp-contract=off` so a golden replay is comparable across compilers. Verified
-in this repo: with contraction on, the golden fingerprint is not portable.
+`-ffp-contract=off`.
+
+**But contraction is not the only source of variance, and CI proved it.** The
+first CI run compared the golden replay's exact-bit fingerprint across
+compilers; 68 of 69 tests passed on Linux and the golden failed, because GCC and
+Clang do not produce bit-identical results even with contraction disabled. The
+golden therefore compares a digest quantised to a micron
+(`World::state_digest`), which still catches a real physics change - a break
+moves balls by centimetres - while tolerating last-bit toolchain noise. Exact
+bit equality is still asserted where it is meaningful and portable: two runs of
+the same binary must agree precisely.
 
 ## 2. Testing
 
@@ -67,10 +76,11 @@ generating Xcode projects.
 | Smoke | link/runtime/rendering breakage without a display | `pool_app --smoke` under SDL's dummy driver |
 
 **Determinism is a property of the build, not of the code alone.** No RNG, no
-wall-clock reads, no unordered iteration, and no FP contraction give a
-reproducible simulation. Verified in this repo: two runs of the same break
-produce identical fingerprints, and the suite tolerates no floating-point
-fuzziness in the golden value - it compares exact bits.
+wall-clock reads, no unordered iteration and no FP contraction give a
+reproducible simulation within a build. Verified in this repo: two runs of the
+same break produce identical exact fingerprints. Across toolchains the portable
+claim is only that the *quantised* state matches, which is what the golden
+asserts.
 
 ## 3. Lint, format and static analysis
 

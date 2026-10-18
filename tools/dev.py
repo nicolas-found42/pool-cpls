@@ -325,7 +325,12 @@ def cmd_cppcheck(args: argparse.Namespace) -> int:
     run([
         binary,
         f"--std=c++23",
-        "--enable=warning,style,performance,portability",
+        # No `style` group. cppcheck is not pinned (no Linux binary is published
+        # for the current release), and its style findings move between versions
+        # - CI's 2.13 reported useStlAlgorithm where 2.22 does not. Style and
+        # semantic smells belong to clang-tidy, which is pinned; cppcheck keeps
+        # the correctness-leaning groups.
+        "--enable=warning,performance,portability",
         "--inline-suppr",
         "--suppress=missingIncludeSystem",
         "--suppress=unusedFunction",

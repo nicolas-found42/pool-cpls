@@ -37,7 +37,7 @@ tools report twice is a finding people learn to ignore.
 | compiler | type errors, implicit conversions, shadowing, format strings | whole-program dataflow |
 | clang-format | whitespace, wrapping, include grouping | anything semantic |
 | clang-tidy | type-aware smells: `bugprone-*`, `clang-analyzer-*`, `performance-*`, curated `modernize-*` / `readability-*` | layout, naming opinion |
-| cppcheck | uninitialised data, dead code, portability, whole-program checks | type-aware analysis |
+| cppcheck | uninitialised data, dead code, portability (warning/performance/portability groups) | style and semantic smells - clang-tidy's, because it is pinned |
 | pre-commit | trailing whitespace, EOF newline, YAML/JSON validity, large files, committing to `main` | compilation |
 | actionlint | workflow syntax and expression types | C++ |
 | libFuzzer + ASan/UBSan | crashes, UB and NaNs on adversarial input | systematic coverage |
@@ -53,6 +53,13 @@ diagnostic:
 | --- | --- | --- |
 | clang-format (major 23) | `tools/dev.py::PINNED_CLANG_FORMAT_MAJOR`, `.pre-commit-config.yaml` `rev` | a different major reformats the tree, so "format check" would fail for whoever has the other version |
 | clang-tidy (major 23) | `tools/dev.py::PINNED_CLANG_TIDY_MAJOR` | the check set and its findings move between majors |
+
+cppcheck is deliberately **not** pinned: the project publishes no Linux binary
+for its current release, and building it in CI would cost more than it returns.
+Instead its check set is restricted to `warning`, `performance` and
+`portability` - the groups whose findings are stable across versions. CI's
+cppcheck 2.13 reported a `style` finding that local 2.22 does not, and style is
+clang-tidy's job anyway.
 
 `python3 tools/dev.py doctor` reports the local versions, the pinned versions,
 and treats a mismatch as a problem. It also resolves keg-only Homebrew LLVM

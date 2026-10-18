@@ -526,6 +526,35 @@ std::uint64_t World::fingerprint() const {
   return hash;
 }
 
+std::uint64_t World::state_digest(double quantum) const {
+  std::uint64_t hash = 1469598103934665603ULL;
+  const auto mix = [&hash](std::uint64_t value) {
+    for (unsigned byte = 0; byte < 8; ++byte) {
+      hash ^= (value >> (byte * 8U)) & 0xFFULL;
+      hash *= 1099511628211ULL;
+    }
+  };
+  const auto quantise = [quantum](double value) {
+    // Round to the nearest quantum step, then keep the two's-complement bit
+    // pattern as an unsigned value so the mixing below stays unsigned.
+    const auto steps = static_cast<std::int64_t>(std::llround(value / quantum));
+    return std::bit_cast<std::uint64_t>(steps);
+  };
+
+  for (const Ball& entry : balls_) {
+    mix(entry.id);
+    mix(entry.on_table ? 1ULL : 0ULL);
+    mix(quantise(entry.position.x));
+    mix(quantise(entry.position.y));
+    mix(quantise(entry.velocity.x));
+    mix(quantise(entry.velocity.y));
+    mix(quantise(entry.spin.x));
+    mix(quantise(entry.spin.y));
+    mix(quantise(entry.spin.z));
+  }
+  return hash;
+}
+
 void World::record(Contact contact) {
   if (record_contacts_) {
     contacts_.push_back(contact);

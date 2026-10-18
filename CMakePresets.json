@@ -63,8 +63,9 @@
       "inherits": "debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_FLAGS": "-O0 -g --coverage -fprofile-instr-generate -fcoverage-mapping",
-        "CMAKE_EXE_LINKER_FLAGS": "--coverage -fprofile-instr-generate"
+        "CMAKE_CXX_FLAGS": "-O0 -g -fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_C_FLAGS": "-O0 -g -fprofile-instr-generate -fcoverage-mapping",
+        "CMAKE_EXE_LINKER_FLAGS": "-fprofile-instr-generate"
       }
     },
     {
@@ -121,7 +122,10 @@
     {
       "name": "coverage",
       "inherits": "base",
-      "configurePreset": "coverage"
+      "configurePreset": "coverage",
+      "environment": {
+        "LLVM_PROFILE_FILE": "${sourceDir}/build/coverage/%p.profraw"
+      }
     },
     {
       "name": "ci",

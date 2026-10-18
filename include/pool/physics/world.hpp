@@ -110,8 +110,19 @@ public:
     contacts_.clear();
   }
 
-  // Deterministic 64-bit fingerprint of the dynamic state.
+  // Deterministic 64-bit fingerprint of the exact dynamic state. Exact bits are
+  // the right thing within one build: two runs of the same binary must agree
+  // precisely.
   [[nodiscard]] std::uint64_t fingerprint() const;
+
+  // Fingerprint of the state quantised to `quantum` (metres, and m/s for
+  // velocities). Use this for goldens that must survive a different compiler:
+  // -ffp-contract=off removes contraction variance, but it does not make libm
+  // and codegen bit-identical across toolchains, and CI proved it - the same
+  // break produced a different exact fingerprint under GCC than under Clang.
+  // Physics changes move balls far more than a micron, so a 1e-6 quantum still
+  // fails the golden for a real change while tolerating last-bit noise.
+  [[nodiscard]] std::uint64_t state_digest(double quantum) const;
 
 private:
   void integrate(double dt);
