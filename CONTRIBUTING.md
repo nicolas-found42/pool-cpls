@@ -24,10 +24,25 @@ Useful narrower loops while working:
 
 ```sh
 python3 tools/dev.py build
-python3 tools/dev.py test -R physics      # one suite
-python3 tools/dev.py test -R "physics:slip"   # one test case
-python3 tools/dev.py test --preset asan   # the same tests under ASan + UBSan
+python3 tools/dev.py test                              # everything
+python3 tools/dev.py test -- -R "rolling condition"    # one test case
+python3 tools/dev.py test --preset asan                # the same tests under ASan + UBSan
 ```
+
+Arguments meant for CMake or ctest follow `--`, so their spelling and order
+survive: `python3 tools/dev.py configure -- -DPOOL_SDL_HEADLESS=ON`.
+
+## Linux build dependencies
+
+macOS and Windows need nothing beyond the compiler and CMake. On Linux, SDL3's
+configure step requires the X11 or Wayland development libraries - its own
+message points at
+[SDL's Linux build dependencies](https://wiki.libsdl.org/SDL3/README-linux).
+Install them to build the windowed app.
+
+CI does not: it builds a fetched SDL3 with `-DPOOL_SDL_HEADLESS=ON`, which is
+SDL's documented `SDL_UNIX_CONSOLE_BUILD` path, because a runner only needs the
+dummy video driver for the headless smoke test.
 
 ## Where code goes
 
@@ -53,7 +68,7 @@ Physics changes are the ones that bite later, so they have extra rules:
 3. **Re-pin the golden deliberately.** A physics change moves the fingerprint:
 
    ```sh
-   POOL_UPDATE_GOLDEN=1 python3 tools/dev.py test -R replay
+   POOL_UPDATE_GOLDEN=1 python3 tools/dev.py test -- -R replay
    git diff tests/replay/expected_fingerprint.txt
    ```
 

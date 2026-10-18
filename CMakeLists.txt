@@ -16,6 +16,9 @@ option(POOL_BUILD_APP "Build the SDL3 front-end" ON)
 option(POOL_BUILD_TESTS "Build the test suite" ${BUILD_TESTING})
 option(POOL_BUILD_BENCH "Build micro-benchmarks" OFF)
 option(POOL_FUZZ "Build libFuzzer targets (needs clang -fsanitize=fuzzer)" OFF)
+option(POOL_SDL_HEADLESS
+  "Build a fetched SDL3 with the dummy video driver only (for CI on Linux, which has no X11/Wayland dev libraries)"
+  OFF)
 option(POOL_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
 option(POOL_ENABLE_CCACHE "Use ccache/sccache when available" ON)
 

@@ -430,12 +430,12 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     sub.add_parser("doctor", help="report the toolchain")
-    sub.add_parser("configure", help="configure a preset").add_argument(
-        "extra", nargs="*", help="extra CMake arguments")
+    sub.add_parser("configure", help="configure a preset (CMake arguments after --)").add_argument(
+        "extra", nargs="*", help="CMake arguments")
     build = sub.add_parser("build", help="build a preset")
     build.add_argument("targets", nargs="*", help="targets to build")
-    test = sub.add_parser("test", help="run ctest")
-    test.add_argument("extra", nargs="*", help="extra ctest arguments")
+    test = sub.add_parser("test", help="run ctest (extra ctest arguments after --)")
+    test.add_argument("extra", nargs="*", help="ctest arguments")
 
     fmt = sub.add_parser("format", help="rewrite files with clang-format")
     fmt.add_argument("--check", action="store_true", help="report differences instead of writing")
@@ -455,7 +455,29 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("run", help="build and launch the game")
     sub.add_parser("clean", help="delete the build directory")
 
-    args = parser.parse_args(argv)
+    # Arguments meant for CMake or ctest start with a dash, which argparse would
+    # treat as an option of this script. They go after `--`, so the split is
+    # explicit and their order and spelling survive verbatim:
+    #   dev.py configure -- -DPOOL_SDL_HEADLESS=ON
+    #   dev.py test -- -R physics --repeat until-fail:5
+    argv_list = list(argv) if argv is not None else sys.argv[1:]
+    trailing: list[str] = []
+    if "--" in argv_list:
+        split = argv_list.index("--")
+        trailing = argv_list[split + 1 :]
+        argv_list = argv_list[:split]
+
+    args = parser.parse_args(argv_list)
+
+    if trailing:
+        pass_through = {
+            "configure": "extra",
+            "build": "targets",
+            "test": "extra",
+        }.get(args.command)
+        if pass_through is None:
+            parser.error(f"{args.command} takes no arguments after --")
+        setattr(args, pass_through, [*getattr(args, pass_through), *trailing])
 
     handlers = {
         "doctor": cmd_doctor,

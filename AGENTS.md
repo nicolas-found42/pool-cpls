@@ -30,7 +30,7 @@ python3 tools/dev.py doctor        # toolchain + version-skew report; run this f
 python3 tools/dev.py check         # THE GATE: format-check, tidy, cppcheck, build, test
 python3 tools/dev.py build         # build the dev preset
 python3 tools/dev.py test          # ctest
-python3 tools/dev.py test -R physics -- -j8   # arguments pass through to ctest
+python3 tools/dev.py test -- -R physics -j8   # arguments for ctest go after --
 python3 tools/dev.py format        # rewrite files with clang-format
 python3 tools/dev.py tidy          # clang-tidy over the compile database
 python3 tools/dev.py cppcheck      # static analysis
@@ -94,7 +94,7 @@ disabled, is in `docs/agents/tooling.md`. The short version:
   a comment, and a test that asserts the range. Values in this repo cite sources
   in `docs/research/dev-toolchain-and-physics.md`.
 - **Changing physics changes the golden.** Re-pin it deliberately
-  (`POOL_UPDATE_GOLDEN=1 dev.py test -R replay`) and review the diff; a changed
+  (`POOL_UPDATE_GOLDEN=1 dev.py test -- -R replay`) and review the diff; a changed
   fingerprint means the physics changed.
 - **Never loosen a test to make a change pass.** If a physical invariant fails,
   the model is wrong or the test encodes a real expectation - find out which.

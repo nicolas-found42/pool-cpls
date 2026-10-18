@@ -8,6 +8,12 @@
 
 # Register a Catch2 test binary. Per-test discovery gives `ctest -R` the test
 # case names; without Catch2's extras the whole binary is one CTest entry.
+#
+# `include(Catch)` is what defines catch_discover_tests; Dependencies.cmake put
+# Catch2's extras directory on CMAKE_MODULE_PATH, which upstream documents as
+# required when Catch2 comes from FetchContent.
+include(Catch OPTIONAL)
+
 function(pool_register_tests target prefix label)
   if(COMMAND catch_discover_tests)
     catch_discover_tests(${target}
@@ -56,7 +62,7 @@ if(POOL_BUILD_APP)
   set_tests_properties("smoke:app" PROPERTIES
     LABELS "smoke"
     TIMEOUT 30
-    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
+    ENVIRONMENT "SDL_VIDEO_DRIVER=dummy;SDL_AUDIO_DRIVER=dummy")
 endif()
 
 # Fuzzing is opt-in: `cmake --preset fuzz` sets POOL_FUZZ=ON, which needs

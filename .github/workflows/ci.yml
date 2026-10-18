@@ -62,7 +62,7 @@ jobs:
           CLANG_FORMAT: clang-format-23
 
       - name: Configure (for the compile database)
-        run: python3 tools/dev.py configure
+        run: python3 tools/dev.py configure -- -DPOOL_SDL_HEADLESS=ON
 
       - name: clang-tidy (warnings are errors)
         run: python3 tools/dev.py tidy --strict
@@ -113,7 +113,13 @@ jobs:
 
       - name: Configure
         shell: bash
-        run: cmake --preset ${{ matrix.build_type }} -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        # Linux runners have no X11/Wayland development libraries, and CI only
+        # needs the dummy video driver for the smoke test. macOS and Windows
+        # build SDL3 normally.
+        run: |
+          cmake --preset ${{ matrix.build_type }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DPOOL_SDL_HEADLESS=${{ runner.os == 'Linux' && 'ON' || 'OFF' }}
 
       - name: Build
         shell: bash
@@ -139,7 +145,8 @@ jobs:
 
       - name: Configure with ASan + UBSan
         run: |
-          cmake --preset asan -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
+          cmake --preset asan -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang \
+            -DPOOL_SDL_HEADLESS=ON
 
       - name: Build
         run: cmake --build --preset asan
@@ -152,7 +159,8 @@ jobs:
 
       - name: Fuzz for 60 seconds
         run: |
-          cmake --preset fuzz -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
+          cmake --preset fuzz -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang \
+            -DPOOL_SDL_HEADLESS=ON
           cmake --build --preset fuzz --target pool_fuzz_strike
           mkdir -p tests/fuzz/corpus
           ./build/fuzz/tests/pool_fuzz_strike tests/fuzz/corpus -max_total_time=60 -rss_limit_mb=2048
@@ -165,7 +173,7 @@ jobs:
       - name: Install clang, ninja and llvm tools
         run: sudo apt-get update -qq && sudo apt-get install -y -qq clang llvm ninja-build
       - name: Configure
-        run: cmake --preset coverage -DCMAKE_CXX_COMPILER=clang++
+        run: cmake --preset coverage -DCMAKE_CXX_COMPILER=clang++ -DPOOL_SDL_HEADLESS=ON
       - name: Build
         run: cmake --build --preset coverage
       - name: Test

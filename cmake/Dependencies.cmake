@@ -15,6 +15,20 @@ if(POOL_BUILD_APP)
 
   if(NOT SDL3_FOUND)
     message(STATUS "SDL3 not found; fetching pinned release-3.4.18")
+    # On Linux, SDL3 refuses to configure without X11 or Wayland development
+    # libraries. A CI runner only needs the dummy video driver, and SDL
+    # documents -DSDL_UNIX_CONSOLE_BUILD=ON for exactly that case
+    # (docs/README-cmake.md, "CMake fails to build without X11 or Wayland
+    # support"). POOL_SDL_HEADLESS opts in; a Linux developer who wants a window
+    # should install SDL3's build dependencies instead - see CONTRIBUTING.md.
+    if(POOL_SDL_HEADLESS)
+      set(SDL_UNIX_CONSOLE_BUILD ON CACHE BOOL "" FORCE)
+      set(SDL_ALSA OFF CACHE BOOL "" FORCE)
+      set(SDL_PULSEAUDIO OFF CACHE BOOL "" FORCE)
+      set(SDL_PIPEWIRE OFF CACHE BOOL "" FORCE)
+      set(SDL_SNDIO OFF CACHE BOOL "" FORCE)
+      message(STATUS "POOL_SDL_HEADLESS: SDL3 builds with the dummy video driver only")
+    endif()
     FetchContent_Declare(SDL3
       URL https://github.com/libsdl-org/SDL/archive/refs/tags/release-3.4.18.tar.gz
       URL_HASH SHA256=c4b08b950bd29d83caae0ab8d884298d27046a9d30700fb42841c50992665c90
@@ -73,8 +87,10 @@ function(pool_enable_ccache target)
   find_program(POOL_CCACHE_PROGRAM NAMES sccache ccache)
   if(POOL_CCACHE_PROGRAM)
     message(STATUS "Using compiler launcher: ${POOL_CCACHE_PROGRAM}")
-    target_compile_options(${target} INTERFACE
-      "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-Xclang -fno-pch-timestamp>")
+    # Only the launcher is set. Flagging the launcher with compiler-specific
+    # options breaks other compilers: an earlier version passed
+    # `-Xclang -fno-pch-timestamp` here, which MSVC rejects outright.
     set(CMAKE_CXX_COMPILER_LAUNCHER "${POOL_CCACHE_PROGRAM}" PARENT_SCOPE)
+    set(CMAKE_C_COMPILER_LAUNCHER "${POOL_CCACHE_PROGRAM}" PARENT_SCOPE)
   endif()
 endfunction()
