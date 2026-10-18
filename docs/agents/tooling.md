@@ -38,7 +38,7 @@ tools report twice is a finding people learn to ignore.
 | clang-format | whitespace, wrapping, include grouping | anything semantic |
 | clang-tidy | type-aware smells: `bugprone-*`, `clang-analyzer-*`, `performance-*`, curated `modernize-*` / `readability-*` | layout, naming opinion |
 | cppcheck | uninitialised data, dead code, portability (warning/performance/portability groups) | style and semantic smells - clang-tidy's, because it is pinned |
-| pre-commit | trailing whitespace, EOF newline, YAML/JSON validity, large files, committing to `main` | compilation |
+| pre-commit | trailing whitespace, EOF newline, YAML/JSON validity, large files, committing to `main` (local commits only) | compilation |
 | actionlint | workflow syntax and expression types | C++ |
 | libFuzzer + ASan/UBSan | crashes, UB and NaNs on adversarial input | systematic coverage |
 
@@ -83,6 +83,7 @@ flag. Suppressions are not silent.
 | `tools/dev.py` (cppcheck) | `knownConditionTrueFalse` for `tests/*` | unit tests assert a pure function's output for constant input; that is the point of the test |
 | `tools/dev.py` (cppcheck) | `unusedFunction` | a static library's entry points look unused per translation unit |
 | `.clang-tidy` | `bugprone-easily-swappable-parameters`, `bugprone-narrowing-conversions` | duplicate compiler warnings that are already errors |
+| CI's hygiene step | `no-commit-to-branch` (`SKIP=`) | it guards a developer's `git commit`; checking out `main` in CI is exactly the case it rejects |
 
 cppcheck analyses **translation units only**. Analysing a header on its own
 means nothing in it has a reader, which is how it invents `unusedStructMember`

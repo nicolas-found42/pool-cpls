@@ -78,6 +78,10 @@ jobs:
           ./actionlint -color
 
       - name: pre-commit hygiene hooks
+        env:
+          # no-commit-to-branch guards a developer's `git commit`; it fails by
+          # design when CI checks out main, which is the branch it protects.
+          SKIP: no-commit-to-branch
         run: |
           python3 -m pip install --quiet pre-commit
           pre-commit run --all-files --show-diff-on-failure
