@@ -41,14 +41,9 @@ repos:
         # touches staged files, and `dev.py format --check` covers the rest in CI.
         args: ['-i']
 
-  - repo: local
-    hooks:
-      # clang-tidy is deliberately NOT a pre-commit hook: it needs a configured
-      # build directory and a compile database, and takes seconds per file. It
-      # belongs in CI and in `dev.py check`.
-      - id: cmake-format-check
-        name: CMakeLists formatting (gersemi, when installed)
-        entry: bash -c 'command -v gersemi >/dev/null && gersemi --check CMakeLists.txt cmake/ bench/ tests/ || echo "gersemi not installed; skipped"'
-        language: system
-        files: '(CMakeLists\.txt|\.cmake)$'
-        pass_filenames: false
+  # CMake formatting is deliberately not gated here. An earlier revision ran
+  # gersemi "when installed" through a local hook whose `|| echo skipped`
+  # fallback also swallowed a real failure, so it reported success whether or
+  # not the tool ran. A hook that cannot fail is worse than no hook: it implies
+  # the CMake files are checked. Wire gersemi in as a pinned repo hook with a
+  # real `rev` if you want that gate.

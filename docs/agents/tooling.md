@@ -103,6 +103,18 @@ that include them.
 - **The physics core stays dependency-free**, which is what lets every physics
   test run in milliseconds with no display, no assets and no network.
 
+## Known gaps
+
+- **CMake files are not format-checked.** Nothing tools the `CMakeLists.txt`
+  files or the `cmake/` modules. An earlier config implied otherwise with a
+  gersemi hook that could not fail; it was removed rather than left as a
+  comforting no-op.
+- **clang-tidy and cppcheck run in CI, not on commit.** They need a configured
+  build directory, so they live behind `dev.py check`.
+- **The rail model has one documented deviation from measurement**
+  (~0.65 modelled against ~0.50 measured for a rolling perpendicular rebound);
+  see ADR-0003.
+
 ## Adding a tool
 
 Ask three questions before adding one:
