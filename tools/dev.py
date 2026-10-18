@@ -434,6 +434,27 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--jobs", default=None, help="parallel build jobs")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    # The same two options are accepted after the subcommand, so
+    # `dev.py test --preset asan` works as well as `dev.py --preset asan test`.
+    # SUPPRESS as the default keeps the subparser from clobbering a value the
+    # top-level parser already bound.
+    def add_common_options(subparser: argparse.ArgumentParser) -> None:
+        subparser.add_argument(
+            "--preset", default=argparse.SUPPRESS, help="CMake preset (default: dev)"
+        )
+        subparser.add_argument(
+            "--jobs", default=argparse.SUPPRESS, help="parallel build jobs"
+        )
+
+    raw_add_parser = sub.add_parser
+
+    def add_parser(name: str, **kwargs: object) -> argparse.ArgumentParser:
+        created = raw_add_parser(name, **kwargs)  # type: ignore[arg-type]
+        add_common_options(created)
+        return created
+
+    sub.add_parser = add_parser  # type: ignore[method-assign]
+
     sub.add_parser("doctor", help="report the toolchain")
     sub.add_parser("configure", help="configure a preset (CMake arguments after --)").add_argument(
         "extra", nargs="*", help="CMake arguments")
