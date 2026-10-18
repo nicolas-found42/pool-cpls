@@ -7,6 +7,8 @@ transfer at the cushions, draw and follow from the cue tip offset, and squirt.
 
 Requires the tape measure less than a table does.
 
+![The rack, rendered by the SDL3 front-end](docs/images/table.png)
+
 ## Build and run
 
 ```sh
