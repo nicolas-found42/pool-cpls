@@ -55,6 +55,9 @@ SOURCE_GLOBS = [
 # Directories searched last, after $PATH, when a tool is not found. Homebrew's
 # LLVM is keg-only, so clang-format/clang-tidy are not on PATH by default.
 FALLBACK_PATHS = [
+    # Apple's own LLVM tools: their profile format matches Apple clang, whereas
+    # a Homebrew LLVM of a different major refuses to read Apple's .profraw.
+    "/Library/Developer/CommandLineTools/usr/bin",
     "/opt/homebrew/opt/llvm/bin",
     "/usr/local/opt/llvm/bin",
     "/opt/homebrew/opt/llvm@23/bin",
@@ -374,18 +377,48 @@ def cmd_check(args: argparse.Namespace) -> int:
 
 def cmd_coverage(args: argparse.Namespace) -> int:
     preset = "coverage"
+    build = build_dir(preset)
+    raw_profiles = sorted(build.glob("*.profraw"))
+
     cmake_configure(preset, [])
     cmake_build(preset, [], args.jobs)
     run(["ctest", "--preset", "coverage", "--output-on-failure"])
-    profile = ROOT / "build" / preset / "coverage.profdata"
-    run(["llvm-profdata", "merge", "-sparse", *map(str, (ROOT / "build" / preset).glob("*.profraw")),
-         "-o", str(profile)])
-    llvm_cov = which("llvm-cov") or "llvm-cov"
-    binaries = sorted(str(p) for p in (ROOT / "build" / preset / "tests").glob("*_tests"))
-    objects = []
+
+    raw_profiles = sorted(build.glob("*.profraw"))
+    if not raw_profiles:
+        raise Failure(
+            f"no .profraw files in {build}. The coverage preset sets "
+            "LLVM_PROFILE_FILE; check that the tests actually ran."
+        )
+
+    profile = build / "coverage.profdata"
+    profdata = which("llvm-profdata")
+    llvm_cov = which("llvm-cov")
+    if profdata is None or llvm_cov is None:
+        raise Failure(
+            "llvm-profdata and llvm-cov are required for coverage. Install LLVM 23 "
+            "(`brew install llvm`, `apt install llvm`) or set them on PATH. They must "
+            "be the same major version as the compiler that produced the profiles."
+        )
+
+    run([profdata, "merge", "-sparse", *map(str, raw_profiles), "-o", str(profile)])
+    binaries = sorted(str(binary) for binary in (build / "tests").glob("*_tests"))
+    if not binaries:
+        raise Failure(f"no test binaries under {build / 'tests'}")
+    objects: list[str] = []
     for binary in binaries:
         objects += ["-object", binary]
-    run([llvm_cov, "report", str(binaries[0]), f"-instr-profile={profile}", *objects])
+    # Report on this repository's code only: the profiles also cover the
+    # FetchContent sources (Catch2), and averaging those in makes the number
+    # meaningless.
+    run([
+        llvm_cov,
+        "report",
+        binaries[0],
+        f"-instr-profile={profile}",
+        *objects,
+        "-ignore-filename-regex=(tests|_deps|catch2|SDL)/",
+    ])
     return 0
 
 

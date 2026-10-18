@@ -186,4 +186,4 @@ jobs:
           llvm-cov report build/coverage/tests/pool_physics_tests \
             -instr-profile=build/coverage/coverage.profdata \
             -object build/coverage/tests/pool_game_tests \
-            -ignore-filename-regex='(tests|_deps)/'
+            -ignore-filename-regex='(tests|_deps|catch2|SDL)/'
