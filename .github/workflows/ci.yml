@@ -1,0 +1,195 @@
+# Continuous integration.
+#
+# Three jobs, cheapest first, so a formatting mistake fails in seconds instead of
+# after a three-OS build matrix:
+#
+#   lint        clang-format + hygiene hooks + actionlint     (~1 min)
+#   build-test  3 OS x 2 build types, CTest                   (~10 min)
+#   sanitizers  ASan + UBSan on Linux, plus the fuzz target   (~6 min)
+#
+# Everything a job needs is reachable through `python3 tools/dev.py`, so a
+# developer can reproduce any failure locally with the same commands.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CTEST_OUTPUT_ON_FAILURE: 1
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      # clang-format/clang-tidy 23 from the official LLVM apt repository; the
+      # distro's default is older and would reformat the tree differently.
+      - name: Install LLVM 23
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key \
+            | sudo gpg --dearmor -o /usr/share/keyrings/llvm.gpg
+          echo "deb [signed-by=/usr/share/keyrings/llvm.gpg] http://apt.llvm.org/noble/ llvm-toolchain-noble-23 main" \
+            | sudo tee /etc/apt/sources.list.d/llvm.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq clang-format-23 clang-tidy-23 cppcheck ninja-build
+
+      - name: Report toolchain versions
+        run: |
+          clang-format-23 --version
+          clang-tidy-23 --version
+          cppcheck --version
+          cmake --version
+        env:
+          CLANG_FORMAT: clang-format-23
+          CLANG_TIDY: clang-tidy-23
+
+      - name: clang-format
+        run: python3 tools/dev.py format --check
+        env:
+          CLANG_FORMAT: clang-format-23
+
+      - name: Configure (for the compile database)
+        run: python3 tools/dev.py configure -- -DPOOL_SDL_HEADLESS=ON
+
+      - name: clang-tidy (warnings are errors)
+        run: python3 tools/dev.py tidy --strict
+        env:
+          CLANG_TIDY: clang-tidy-23
+
+      - name: cppcheck
+        run: python3 tools/dev.py cppcheck
+
+      - name: actionlint
+        run: |
+          bash <(curl -sSf https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+
+      - name: pre-commit hygiene hooks
+        run: |
+          python3 -m pip install --quiet pre-commit
+          pre-commit run --all-files --show-diff-on-failure
+
+  build-test:
+    name: ${{ matrix.os }} / ${{ matrix.build_type }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-15, windows-2025]
+        build_type: [debug, release]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Ninja (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ninja-build
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja -y --no-progress
+
+      - name: Install Ninja (macOS)
+        if: runner.os == 'macOS'
+        run: brew install ninja
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ matrix.os }}-${{ matrix.build_type }}
+          max-size: 500M
+
+      - name: Configure
+        shell: bash
+        # Linux runners have no X11/Wayland development libraries, and CI only
+        # needs the dummy video driver for the smoke test. macOS and Windows
+        # build SDL3 normally.
+        run: |
+          cmake --preset ${{ matrix.build_type }} \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DPOOL_SDL_HEADLESS=${{ runner.os == 'Linux' && 'ON' || 'OFF' }}
+
+      - name: Build
+        shell: bash
+        run: cmake --build --preset ${{ matrix.build_type }}
+
+      - name: Test
+        shell: bash
+        run: ctest --preset ${{ matrix.build_type }}
+
+      - name: Smoke test the app (headless)
+        if: runner.os != 'Windows'
+        shell: bash
+        # SDL3's hint names; the SDL2 spellings are silently ignored. On Linux
+        # the fetched SDL3 has only the dummy video driver, so without this the
+        # app cannot initialise video at all.
+        env:
+          SDL_VIDEO_DRIVER: dummy
+          SDL_AUDIO_DRIVER: dummy
+        run: ./build/${{ matrix.build_type }}/pool_app --smoke
+
+  sanitizers:
+    name: sanitizers + fuzz
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install clang and ninja
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang ninja-build
+
+      - name: Configure with ASan + UBSan
+        run: |
+          cmake --preset asan -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang \
+            -DPOOL_SDL_HEADLESS=ON
+
+      - name: Build
+        run: cmake --build --preset asan
+
+      - name: Test under sanitizers
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+        run: ctest --preset asan
+
+      - name: Fuzz for 60 seconds
+        run: |
+          cmake --preset fuzz -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang \
+            -DPOOL_SDL_HEADLESS=ON
+          cmake --build --preset fuzz --target pool_fuzz_strike
+          mkdir -p tests/fuzz/corpus
+          ./build/fuzz/tests/pool_fuzz_strike tests/fuzz/corpus -max_total_time=60 -rss_limit_mb=2048
+
+  coverage:
+    name: coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install clang, ninja and llvm tools
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq clang llvm ninja-build
+      - name: Configure
+        run: |
+          cmake --preset coverage -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang \
+            -DPOOL_SDL_HEADLESS=ON
+      - name: Build
+        run: cmake --build --preset coverage
+      - name: Test
+        run: ctest --preset coverage
+      - name: Report
+        run: |
+          llvm-profdata merge -sparse build/coverage/*.profraw -o build/coverage/coverage.profdata
+          llvm-cov report build/coverage/tests/pool_physics_tests \
+            -instr-profile=build/coverage/coverage.profdata \
+            -object build/coverage/tests/pool_game_tests \
+            -ignore-filename-regex='(tests|_deps|catch2|SDL)/'

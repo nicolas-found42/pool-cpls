@@ -1,0 +1,16 @@
+# Normalise line endings in the repository, not in each working copy.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF so cmd.exe and PowerShell parse them.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.jpg binary
+*.bmp binary
+*.wav binary
+
+# Generated files: never merge, never diff.
+compile_commands.json -diff linguist-generated

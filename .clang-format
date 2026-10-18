@@ -1,0 +1,66 @@
+# clang-format style for pool-cpls.
+#
+# The exact major version is pinned in two places and they must agree:
+#   * tools/dev.py  -> PINNED_CLANG_FORMAT_MAJOR
+#   * .pre-commit-config.yaml -> mirrors-clang-format rev
+# `python3 tools/dev.py doctor` reports the local version and warns on a
+# mismatch, because a different major can reformat the whole tree.
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+ColumnLimit: 100
+IndentWidth: 2
+TabWidth: 2
+UseTab: Never
+AccessModifierOffset: -2
+
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: true
+BinPackParameters: true
+PackConstructorInitializers: Never
+
+PointerAlignment: Left
+DerivePointerAlignment: false
+ReferenceAlignment: Left
+
+NamespaceIndentation: None
+FixNamespaceComments: true
+SpaceAfterTemplateKeyword: true
+SpaceBeforeParens: ControlStatements
+SpacesInAngles: Never
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: None
+AlignConsecutiveDeclarations: None
+AlignEscapedNewlines: Left
+AlignOperands: Align
+AlignTrailingComments: true
+
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerIndentWidth: 2
+ContinuationIndentWidth: 2
+
+SortIncludes: CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  # Own headers first, then project headers, then third-party, then std.
+  - Regex: '^"pool/'
+    Priority: 1
+  - Regex: '^<(SDL3|catch2)/'
+    Priority: 3
+  - Regex: '^<[a-z_]+(\.h|\.hpp)?>$'
+    Priority: 4
+  - Regex: '.*'
+    Priority: 2
+
+# Keep the tree stable: no reflowing of comments or ASCII art.
+ReflowComments: true
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+InsertNewlineAtEOF: true

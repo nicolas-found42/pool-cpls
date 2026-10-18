@@ -1,0 +1,49 @@
+# clang-tidy configuration.
+#
+# Division of labour (see docs/agents/tooling.md):
+#   * clang-format owns layout. It is never a clang-tidy check here.
+#   * clang-tidy owns type-aware and semantic smells (this file).
+#   * cppcheck owns cheap whole-program checks and uninitialised data.
+#   * the compiler with -Wall -Wextra owns everything it already catches; the
+#     checks that merely duplicate a compiler warning are disabled below.
+#
+# Run: python3 tools/dev.py tidy     (or: clang-tidy -p build/dev <file>)
+---
+Checks: >
+  -*,
+  bugprone-*,
+  clang-analyzer-*,
+  performance-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-narrowing-conversions,
+  -bugprone-misplaced-widening-cast,
+  -bugprone-unchecked-optional-access,
+  -bugprone-implicit-widening-of-multiplication-result,
+  modernize-use-default-member-init,
+  modernize-use-emplace,
+  modernize-use-equals-default,
+  modernize-use-nullptr,
+  modernize-use-override,
+  modernize-use-transparent-functors,
+  modernize-use-using,
+  readability-braces-around-statements,
+  readability-container-size-empty,
+  readability-duplicate-include,
+  readability-inconsistent-declaration-parameter-name,
+  readability-misleading-indentation,
+  readability-redundant-declaration,
+  readability-simplify-boolean-expr,
+  readability-static-accessed-through-instance
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '^(include/pool|src)/.*'
+FormatStyle: file
+UseColor: true
+
+CheckOptions:
+  - key: readability-braces-around-statements.ShortStatementLines
+    value: '0'
+  - key: readability-identifier-length.MinimumVariableNameLength
+    value: '1'
+  - key: performance-unnecessary-value-param.AllowedTypes
+    value: 'Vec2;Vec3;Quat;Ball;CueStrike;Contact;ShotFacts'

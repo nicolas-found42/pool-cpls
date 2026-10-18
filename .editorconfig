@@ -1,0 +1,33 @@
+# Editor defaults. Editors honour these; the formatter (clang-format) is the
+# authority for layout, .editorconfig only stops new files from arriving with
+# tabs and CRLF.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+max_line_length = 100
+
+[*.{c,cc,cpp,h,hpp,cxx}]
+indent_size = 2
+# Editor-specific hints (not part of the .editorconfig core spec); harmless if
+# an editor ignores them.
+indent_namespace = false
+indent_access_specifiers = false
+
+[*.{cmake,CMakeLists.txt}]
+indent_size = 2
+
+[*.{json,yaml,yml}]
+indent_size = 2
+
+[*.md]
+# Trailing whitespace is meaningful in Markdown (hard line breaks).
+trim_trailing_whitespace = false
+
+[Makefile]
+indent_style = tab
