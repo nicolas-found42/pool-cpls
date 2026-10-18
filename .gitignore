@@ -1,0 +1,30 @@
+# Build output. One directory per preset; nothing here is source.
+build/
+cmake-build-*/
+
+# Compile database generated at configure time.
+compile_commands.json
+
+# Coverage and profiling output.
+*.gcda
+*.gcno
+*.profraw
+*.profdata
+coverage/
+
+# Fuzzing corpora and crashes (the seed corpus in tests/fuzz/corpus is tracked).
+tests/fuzz/corpus/artifacts/
+crash-*
+leak-*
+
+# Editor and OS noise.
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# CMake and Python scratch.
+CMakeUserPresets.json
+__pycache__/
+*.pyc

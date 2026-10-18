@@ -1,0 +1,54 @@
+# pre-commit hooks.
+#
+# Two ways to run this configuration:
+#   * `pre-commit install`      -> the hooks run on `git commit`
+#   * `pre-commit run --all-files` -> what CI's lint job runs
+#
+# `python3 tools/dev.py check` runs the same checks without pre-commit, for
+# agents that should not depend on a pip-installed hook environment.
+#
+# Version pinning matters more here than anywhere else: clang-format's output is
+# not stable across majors, so the `rev` below must match
+# tools/dev.py::PINNED_CLANG_FORMAT_MAJOR (currently 23). `dev.py doctor` warns
+# when a local binary disagrees.
+---
+default_stages: [pre-commit]
+fail_fast: false
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: '\.md$'
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=2048']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v23.1.3
+    hooks:
+      - id: clang-format
+        types_or: [c++, c]
+        # Formatting the whole tree on every commit is wasteful; the hook only
+        # touches staged files, and `dev.py format --check` covers the rest in CI.
+        args: ['-i']
+
+  - repo: local
+    hooks:
+      # clang-tidy is deliberately NOT a pre-commit hook: it needs a configured
+      # build directory and a compile database, and takes seconds per file. It
+      # belongs in CI and in `dev.py check`.
+      - id: cmake-format-check
+        name: CMakeLists formatting (gersemi, when installed)
+        entry: bash -c 'command -v gersemi >/dev/null && gersemi --check CMakeLists.txt cmake/ bench/ tests/ || echo "gersemi not installed; skipped"'
+        language: system
+        files: '(CMakeLists\.txt|\.cmake)$'
+        pass_filenames: false
